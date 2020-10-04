@@ -3,39 +3,49 @@ import options
 
 type
   ByteRange* = object
-    start*: uint
-    stop*: uint
+    startOpt*: Option[int]
+    stopOpt*: Option[int]
 
-func len*(byteRange: ByteRange): uint {.inline.} =
+func len*(byteRange: ByteRange): int {.inline.} =
   ## Returns the bytes a byteRange Covers
-  (byteRange.stop - byteRange.start) + 1
+  (byteRange.stopOpt.get() - byteRange.startOpt.get()) + 1
 
-func readInt(str: string, integer: var int, pos: var int): bool {.inline.} =
-  try:
-    let intLen = str.parseInt(integer, pos)
-    if intLen == 0: return false
-    pos +=  intLen
-    return true
-  except:
-    return false
+func readInt(str: string, pos: var int): Option[int] {.inline.} =
+  var integer: uint
+  let intLen = str.parseUInt(integer, pos) # TODO this should check somehow if the integer is wrong, then raise
+  if intLen == 0:
+    pos.inc
+    return # no int here, no error, but no value
+  pos +=  intLen
+  return some(integer.int)
+
 
 iterator parseRanges(str: string, pos: var int): ByteRange =
   while true:
+    # debugEcho pos
     if pos >= str.len - 1: break
     pos += str.skipWhitespace(pos) # skip initial whitespaces
 
-    var first: int = 0
-    if not str.readInt(first, pos): break
+    var firstOpt: Option[int]
+    if str[pos] != '-': # the first is omitted, skip to last
+      try:
+        firstOpt = str.readInt(pos)
+      except:
+        break # if parsing error occured, this one is invalid
 
     pos += str.skipWhitespace(pos) # skip whitespaces surrounding " - "
     pos += str.skip("-", pos)
     pos += str.skipWhitespace(pos)
 
-    var second: int = 0
-    if not str.readInt(second, pos): break
+    var secondOpt: Option[int]
+    try:
+      secondOpt = str.readInt(pos)
+    except:
+      break # if parsing error occured, this one is invalid
 
     # debugEcho "E ", first, " ", second
-    yield ByteRange(start: first.uint, stop: second.uint) # TODO choose correct int type
+    if firstOpt.isSome or secondOpt.isSome:
+      yield ByteRange(startOpt: firstOpt, stopOpt: secondOpt) # TODO choose correct int type
 
     pos += str.skipWhitespace(pos) # skip whitespaces surrounding " , "
     pos += str.skip(",", pos)

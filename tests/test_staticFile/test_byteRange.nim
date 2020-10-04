@@ -1,16 +1,18 @@
 import ../../src/prologue/core/byteRanges
+import options
 
 # TODO we need the file lengh to support
 # "get last 500 byte" etc requests
-doAssert ByteRange(start: 0, stop: 0).len == 1
-doAssert ByteRange(start: 0, stop: 1023).len == 1024
-doAssert ByteRange(start: 0, stop: 499).len == 500
-doAssert ByteRange(start: 500, stop: 999).len == 500
+doAssert ByteRange(startOpt: some(0) , stopOpt: some(0)).len == 1
+doAssert ByteRange(startOpt: some(0), stopOpt: some(1023)).len == 1024
+doAssert ByteRange(startOpt: some(0), stopOpt: some(499)).len == 500
+doAssert ByteRange(startOpt: some(500), stopOpt: some(999)).len == 500
 
 when false:
   import timeit
   template pp() =
     let ranges = parseByteRange("bytes=0-50, 100-150,0-50, 100-150,0-50, 100-150,0-50, 100-150,")
+    doAssert ranges.len == 8
   echo timeGo(pp)
 
 # Invalid byte ranges
@@ -27,38 +29,38 @@ block:
   let ranges = parseByteRange("bytes=0-499")
   doAssert ranges.len == 1
   doAssert ranges[0].len == 500
-  doAssert ranges[0].start == 0
-  doAssert ranges[0].stop == 499
+  doAssert ranges[0].startOpt.get() == 0
+  doAssert ranges[0].stopOpt.get() == 499
 
 block:
   let ranges = parseByteRange("bytes=0-50, 100-150")
   doAssert ranges.len == 2
   doAssert ranges[0].len == 51
-  doAssert ranges[0].start == 0
-  doAssert ranges[0].stop == 50
+  doAssert ranges[0].startOpt.get() == 0
+  doAssert ranges[0].stopOpt.get() == 50
   doAssert ranges[1].len == 51
-  doAssert ranges[1].start == 100
-  doAssert ranges[1].stop == 150
+  doAssert ranges[1].startOpt.get() == 100
+  doAssert ranges[1].stopOpt.get() == 150
 
 block:
   let ranges = parseByteRange("bytes=50-100,200-250") # test robust parsing
   doAssert ranges.len == 2
   doAssert ranges[0].len == 51
-  doAssert ranges[0].start == 50
-  doAssert ranges[0].stop == 100
+  doAssert ranges[0].startOpt.get() == 50
+  doAssert ranges[0].stopOpt.get() == 100
   doAssert ranges[1].len == 51
-  doAssert ranges[1].start == 200
-  doAssert ranges[1].stop == 250
+  doAssert ranges[1].startOpt.get() == 200
+  doAssert ranges[1].stopOpt.get() == 250
 
 block:
   let ranges = parseByteRange("bytes= 0-50 ,  100-150 ") # test robust parsing
   doAssert ranges.len == 2
   doAssert ranges[0].len == 51
-  doAssert ranges[0].start == 0
-  doAssert ranges[0].stop == 50
+  doAssert ranges[0].startOpt.get() == 0
+  doAssert ranges[0].stopOpt.get() == 50
   doAssert ranges[1].len == 51
-  doAssert ranges[1].start == 100
-  doAssert ranges[1].stop == 150
+  doAssert ranges[1].startOpt.get() == 100
+  doAssert ranges[1].stopOpt.get() == 150
 
 # invalid integers
 block:
@@ -68,20 +70,37 @@ block:
 block:
   doAssert parseByteRange("bytes= a-b ,  c-d ") == @[] # test robust parsing
   doAssert parseByteRange("bytes= a-b  asd  c-d ") == @[] # test robust parsing
-  doAssert parseByteRange("bytes= 10-ab cd ") == @[] # test robust parsing
-  # doAssert parseByteRange("bytes=00--123") == @[] # test robust parsing # TODO can this work?
+  doAssert parseByteRange("bytes=-") == @[] # test robust parsing
+
+  # TODO this should be invalid !!
+  # doAssert parseByteRange("bytes=500--") == @[] # test robust parsing
+
+
+  # TODO this should be invalid!!
+  # echo parseByteRange("bytes= 10-ab cd ") # test robust parsing
+  # doAssert parseByteRange("bytes= 10-ab cd ") == @[] # test robust parsing
+
+  # TODO can this work? or should this be invalid?
+  # doAssert parseByteRange("bytes=00--123") == @[] # test robust parsing
 
 # more complex byte ranges
-# block:
-#   # A request for the last 500 bytes: bytes=-500
-#   let ranges = parseByteRange("bytes=-500")
-#   echo "C1: ", ranges
-#   doAssert ranges.len == 1
-#   doAssert ranges[0].first.isNone
-#   doAssert ranges[0].second.isSome
-#   doAssert ranges[0].second.get() == 500
+block:
+  # A request for the last 500 bytes: bytes=-500
+  let ranges = parseByteRange("bytes=-500")
+  # echo "C1: ", ranges
+  doAssert ranges.len == 1
+  doAssert ranges[0].startOpt.isNone
+  doAssert ranges[0].stopOpt.isSome
+  doAssert ranges[0].stopOpt.get() == 500
 
-
+block:
+  # offset 501 bytes to the end ## TODO is it 500 or 501 bytes??
+  let ranges = parseByteRange("bytes=500-")
+  # echo "C1: ", ranges
+  doAssert ranges.len == 1
+  doAssert ranges[0].startOpt.isSome
+  doAssert ranges[0].stopOpt.isNone
+  doAssert ranges[0].startOpt.get() == 500
 
 # block:
   # A request for the first and last byte: bytes=0-0,-1
