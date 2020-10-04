@@ -1,4 +1,5 @@
 import parseutils
+import options
 
 type
   ByteRange* = object

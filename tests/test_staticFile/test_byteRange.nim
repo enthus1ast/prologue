@@ -1,5 +1,8 @@
 import ../../src/prologue/core/byteRanges
 
+# TODO we need the file lengh to support
+# "get last 500 byte" etc requests
+doAssert ByteRange(start: 0, stop: 0).len == 1
 doAssert ByteRange(start: 0, stop: 1023).len == 1024
 doAssert ByteRange(start: 0, stop: 499).len == 500
 doAssert ByteRange(start: 500, stop: 999).len == 500
@@ -67,6 +70,22 @@ block:
   doAssert parseByteRange("bytes= a-b  asd  c-d ") == @[] # test robust parsing
   doAssert parseByteRange("bytes= 10-ab cd ") == @[] # test robust parsing
   # doAssert parseByteRange("bytes=00--123") == @[] # test robust parsing # TODO can this work?
+
+# more complex byte ranges
+# block:
+#   # A request for the last 500 bytes: bytes=-500
+#   let ranges = parseByteRange("bytes=-500")
+#   echo "C1: ", ranges
+#   doAssert ranges.len == 1
+#   doAssert ranges[0].first.isNone
+#   doAssert ranges[0].second.isSome
+#   doAssert ranges[0].second.get() == 500
+
+
+
+# block:
+  # A request for the first and last byte: bytes=0-0,-1
+
 
 # doAssert ByteRange(start: 0, stop: 1023).len == 1024
 
