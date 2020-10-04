@@ -4,6 +4,13 @@ doAssert ByteRange(start: 0, stop: 1023).len == 1024
 doAssert ByteRange(start: 0, stop: 499).len == 500
 doAssert ByteRange(start: 500, stop: 999).len == 500
 
+when false:
+  import timeit
+  template pp() =
+    let ranges = parseByteRange("bytes=0-50, 100-150,0-50, 100-150,0-50, 100-150,0-50, 100-150,")
+  echo timeGo(pp)
+
+# Invalid byte ranges
 block:
   doAssert parseByteRange("") == @[]
   doAssert parseByteRange("bytes=") == @[]
@@ -12,6 +19,7 @@ block:
   doAssert parseByteRange("bytes=,") == @[]
   doAssert parseByteRange("someInvalidStuff") == @[]
 
+# Simple from-to ranges
 block:
   let ranges = parseByteRange("bytes=0-499")
   doAssert ranges.len == 1
@@ -21,7 +29,6 @@ block:
 
 block:
   let ranges = parseByteRange("bytes=0-50, 100-150")
-  echo ranges
   doAssert ranges.len == 2
   doAssert ranges[0].len == 51
   doAssert ranges[0].start == 0
@@ -50,11 +57,16 @@ block:
   doAssert ranges[1].start == 100
   doAssert ranges[1].stop == 150
 
+# invalid integers
 block:
   doAssert parseByteRange("bytes=999999999999999999999-9999999999999999999999") == @[] # test robust parsing
 
+# trying to break parseing
 block:
   doAssert parseByteRange("bytes= a-b ,  c-d ") == @[] # test robust parsing
+  doAssert parseByteRange("bytes= a-b  asd  c-d ") == @[] # test robust parsing
+  doAssert parseByteRange("bytes= 10-ab cd ") == @[] # test robust parsing
+  # doAssert parseByteRange("bytes=00--123") == @[] # test robust parsing # TODO can this work?
 
 # doAssert ByteRange(start: 0, stop: 1023).len == 1024
 
